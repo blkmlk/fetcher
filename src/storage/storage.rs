@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::error::Error;
-use std::ops::DerefMut;
 use std::sync::RwLock;
 use crate::storage::connection::{Connection, Row};
 use crate::config::config::Connection as ConfigConnection;
@@ -41,7 +40,7 @@ mod test {
         pub fn new() -> Self {Self {}}
     }
     impl Connection for MockConnection {
-        fn exec(&self, query: String) -> Result<Vec<Row>, Box<dyn Error>> {
+        fn exec(& self, query: String) -> Result<Vec<Row>, Box<dyn Error>> {
             Ok(vec![])
         }
     }
