@@ -4,7 +4,7 @@ use serde_json::Value;
 use crate::config::config::Property::{Audit, ConvertName, ReturnAttribute, Type as PropertyType};
 use crate::config::config::Type::{Boolean, JSON, Number, String as TypeString};
 
-#[derive(PartialEq, Debug)]
+#[derive(Hash, Eq, PartialEq, Debug)]
 pub enum Connection {
     PostgresSQL,
     MySQL,
