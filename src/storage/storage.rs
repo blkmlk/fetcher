@@ -47,7 +47,7 @@ mod test {
     }
 
     #[test]
-    fn storage() {
+    fn exec_query() {
         let storage = Storage::new();
         storage.add_connection(PostgresSQL, Box::new(MockConnection::new()));
 
