@@ -20,11 +20,11 @@ impl Connection for Client {
         let resp = self.client.borrow_mut().query(&query, &[])?;
         let mut result = vec![];
 
-        for r in resp {
+        for row in resp {
             let mut columns = vec![];
-            for c in r.columns() {
-                let value = parse_column(&r, &c)?;
-                columns.push((c.name().to_string(), value));
+            for col in row.columns() {
+                let value = parse_column(&row, &col)?;
+                columns.push((col.name().to_string(), value));
             }
             result.push(Row{columns});
         }
