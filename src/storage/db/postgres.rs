@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 use std::error::Error;
-use postgres::NoTls;
+use postgres::{Column, NoTls};
 use crate::storage::connection::{Connection, Row};
 
 struct Client {
@@ -23,24 +23,28 @@ impl Connection for Client {
         for r in resp {
             let mut columns = vec![];
             for (i, c) in r.columns().iter().enumerate() {
-                let value: String = match c.type_().name() {
-                    "int4" => {
-                        let v: i32 = r.get(i);
-                        v.to_string()
-                    }
-                    "varchar" => r.get(i),
-                    "bool" => {
-                        let v: bool = r.get(i);
-                        v.to_string()
-                    },
-                    v => return Err(format!("unknown type {}", v).into())
-                };
+                let value = parse_column(i, &r, &c)?;
                 columns.push((c.name().to_string(), value));
             }
             result.push(Row{columns});
         }
 
         Ok(result)
+    }
+}
+
+fn parse_column(idx: usize, row: &postgres::Row, col: &Column) -> Result<String, Box<dyn Error>> {
+    match col.type_().name() {
+        "int4" => {
+            let v: i32 = row.get(idx);
+            Ok(v.to_string())
+        }
+        "varchar" => Ok(row.get(idx)),
+        "bool" => {
+            let v: bool = row.get(idx);
+            Ok(v.to_string())
+        },
+        v => Err(format!("unknown type {}", v).into())
     }
 }
 
