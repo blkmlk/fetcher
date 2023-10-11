@@ -23,7 +23,7 @@ impl Connection for Client {
         for row in resp {
             let mut columns = vec![];
             for col in row.columns() {
-                let value = parse_column(&row, &col)?;
+                let value = parse_column_value(&row, &col)?;
                 columns.push((col.name().to_string(), value));
             }
             result.push(Row{columns});
@@ -33,7 +33,7 @@ impl Connection for Client {
     }
 }
 
-fn parse_column(row: &postgres::Row, col: &Column) -> Result<String, Box<dyn Error>> {
+fn parse_column_value(row: &postgres::Row, col: &Column) -> Result<String, Box<dyn Error>> {
     match col.type_().name() {
         "int4" => {
             let v: i32 = row.get(col.name());
