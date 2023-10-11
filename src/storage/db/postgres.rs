@@ -29,6 +29,10 @@ impl Connection for Client {
                         v.to_string()
                     }
                     "varchar" => r.get(i),
+                    "bool" => {
+                        let v: bool = r.get(i);
+                        v.to_string()
+                    },
                     v => {
                         println!("{}", v);
                         "".to_string()
@@ -56,15 +60,17 @@ mod test {
         init_data();
         let client = Client::new(DB_URL.to_string());
 
-        let rows = client.exec("select id, name from test".to_string()).unwrap();
+        let rows = client.exec("select id, name, flag from test".to_string()).unwrap();
         assert_eq!(rows.len(), 1);
-        assert_eq!(rows[0].columns.len(), 2);
+        assert_eq!(rows[0].columns.len(), 3);
+        assert_eq!(rows[0].columns.iter().map(|x| x.0.to_owned()).collect::<Vec<_>>(), vec!["id", "name", "flag"]);
+        assert_eq!(rows[0].columns.iter().map(|x| x.1.to_owned()).collect::<Vec<_>>(), vec!["1", "Islam", "true"]);
     }
 
     fn init_data() {
         let mut conn = postgres::Client::connect(DB_URL, NoTls).unwrap();
-        conn.execute("create table test(id int PRIMARY KEY, name varchar)", &[]).unwrap();
-        conn.execute("insert into test (id, name) values (1, 'Islam')", &[]).unwrap();
+        conn.execute("create table test(id int PRIMARY KEY, name varchar, flag boolean)", &[]).unwrap();
+        conn.execute("insert into test (id, name, flag) values (1, 'Islam', true)", &[]).unwrap();
     }
 
     fn drop_data() {
