@@ -10,3 +10,14 @@ services:
       POSTGRES_DB: test
     ports:
       - "15432:5432"
+
+  mysql:
+    image: mysql
+    restart: always
+    environment:
+      MYSQL_USER: mysql
+      MYSQL_PASSWORD: mysql
+      MYSQL_DATABASE: test
+      MYSQL_ROOT_PASSWORD: mysql
+    ports:
+      - "13306:3306"

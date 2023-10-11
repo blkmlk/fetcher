@@ -31,7 +31,7 @@ impl Connection for Client {
             for i in 0..row.len() {
                 let value: String = match row.index(i) {
                     Value::NULL => String::from("null"),
-                    Value::Bytes(v) => String::from(v),
+                    Value::Bytes(v) => String::from_utf8_lossy(v).to_string(),
                     Value::Int(v) => v.to_string(),
                     Value::UInt(v) => v.to_string(),
                     Value::Float(v) => v.to_string(),
@@ -39,7 +39,7 @@ impl Connection for Client {
                     _ => return Err("unsupported type".into())
                 };
 
-                let name = String::from(row.columns_ref()[i].name_ref());
+                let name = String::from_utf8_lossy(row.columns_ref()[i].name_ref()).to_string();
 
                 columns.push((name, value));
             }
@@ -56,7 +56,7 @@ mod test {
     use mysql::prelude::Queryable;
     use crate::storage::connection::Connection;
 
-    const DB_URL: &str = "";
+    const DB_URL: &str = "mysql://mysql:mysql@localhost:13306/test";
 
     #[test]
     fn exec() {
@@ -68,20 +68,20 @@ mod test {
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0].columns.len(), 3);
         assert_eq!(rows[0].columns.iter().map(|x| x.0.to_owned()).collect::<Vec<_>>(), vec!["id", "name", "flag"]);
-        assert_eq!(rows[0].columns.iter().map(|x| x.1.to_owned()).collect::<Vec<_>>(), vec!["1", "Islam", "true"]);
+        assert_eq!(rows[0].columns.iter().map(|x| x.1.to_owned()).collect::<Vec<_>>(), vec!["1", "Islam", "1"]);
     }
 
     fn init_data() {
         let pool = mysql::Pool::new(DB_URL).unwrap();
         let mut conn = pool.get_conn().unwrap();
 
-        conn.exec("create table test(id int PRIMARY KEY, name varchar, flag boolean)", &[]).unwrap();
-        conn.exec("insert into test (id, name, flag) values (1, 'Islam', true)", &[]).unwrap();
+        conn.exec_drop("create table test(id int PRIMARY KEY, name varchar(255), flag int)", ()).unwrap();
+        conn.exec_drop("insert into test (id, name, flag) values (1, 'Islam', 1)",()).unwrap();
     }
 
     fn drop_data() {
         let pool = mysql::Pool::new(DB_URL).unwrap();
         let mut conn = pool.get_conn().unwrap();
-        conn.exec("drop table test", &[]).unwrap();
+        conn.exec_drop("drop table test", ()).unwrap_or(());
     }
 }
