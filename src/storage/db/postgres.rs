@@ -22,8 +22,8 @@ impl Connection for Client {
 
         for r in resp {
             let mut columns = vec![];
-            for (i, c) in r.columns().iter().enumerate() {
-                let value = parse_column(i, &r, &c)?;
+            for c in r.columns() {
+                let value = parse_column(&r, &c)?;
                 columns.push((c.name().to_string(), value));
             }
             result.push(Row{columns});
@@ -33,15 +33,15 @@ impl Connection for Client {
     }
 }
 
-fn parse_column(idx: usize, row: &postgres::Row, col: &Column) -> Result<String, Box<dyn Error>> {
+fn parse_column(row: &postgres::Row, col: &Column) -> Result<String, Box<dyn Error>> {
     match col.type_().name() {
         "int4" => {
-            let v: i32 = row.get(idx);
+            let v: i32 = row.get(col.name());
             Ok(v.to_string())
         }
-        "varchar" => Ok(row.get(idx)),
+        "varchar" => Ok(row.get(col.name())),
         "bool" => {
-            let v: bool = row.get(idx);
+            let v: bool = row.get(col.name());
             Ok(v.to_string())
         },
         v => Err(format!("unknown type {}", v).into())
