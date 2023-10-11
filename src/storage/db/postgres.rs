@@ -33,10 +33,7 @@ impl Connection for Client {
                         let v: bool = r.get(i);
                         v.to_string()
                     },
-                    v => {
-                        println!("{}", v);
-                        "".to_string()
-                    }
+                    v => return Err(format!("unknown type {}", v).into())
                 };
                 columns.push((c.name().to_string(), value));
             }
