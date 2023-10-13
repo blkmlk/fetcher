@@ -1,40 +1,69 @@
 use std::cell::RefCell;
 use std::error::Error;
-use postgres::{Column, NoTls};
+use std::future::Future;
+use futures_executor::block_on;
+use tokio::task::JoinHandle;
+use tokio_postgres::GenericClient;
+use crate::storage::connection;
 use crate::storage::connection::{Connection, Row};
 
-struct Client {
-    client: RefCell<postgres::Client>
+pub struct Client {
+    client: RefCell<tokio_postgres::Client>,
+    sp: JoinHandle<()>,
+}
+
+impl Drop for Client {
+    fn drop(&mut self) {
+        self.close();
+    }
 }
 
 impl Client {
-    pub fn new(url: String) -> Self {
-        let client = postgres::Client::connect(url.as_str(), NoTls).unwrap();
+    pub async fn new_async(url: String) -> Self {
+        let (client, conn) = tokio_postgres::connect(url.as_str(), tokio_postgres::NoTls).await.unwrap();
 
-        Self { client: RefCell::new(client) }
+        let t = tokio::spawn(async move{
+            if let Err(e) = conn.await {
+                panic!("{}", e);
+            }
+        });
+
+        Self {
+            client: RefCell::new(client),
+            sp: t,
+        }
+    }
+
+    pub fn close(&self) {
+        self.sp.abort();
     }
 }
 
 impl Connection for Client {
-    fn exec(&self, query: String) -> Result<Vec<Row>, Box<dyn Error>> {
-        let resp = self.client.borrow_mut().query(&query, &[])?;
-        let mut result = vec![];
+    fn exec(&self, query: String) -> connection::ExecResult {
+        return Box::pin(
+            async move {
+                let resp = self.client.borrow_mut().query(&query, &[]).await?;
+                let mut result = vec![];
 
-        for row in resp {
-            let mut columns = vec![];
-            for col in row.columns() {
-                let value = parse_column_value(&row, &col)?;
-                columns.push((col.name().to_string(), value));
+                for row in resp {
+                    let mut columns = vec![];
+                    for col in row.columns() {
+                        let value = parse_column_value(&row, &col)?;
+                        columns.push((col.name().to_string(), value));
+                    }
+                    result.push(Row{columns});
+                }
+
+                Ok(result)
             }
-            result.push(Row{columns});
-        }
-
-        Ok(result)
+        );
     }
 }
 
-fn parse_column_value(row: &postgres::Row, col: &Column) -> Result<String, Box<dyn Error>> {
+fn parse_column_value(row: &tokio_postgres::Row, col: &tokio_postgres::Column) -> Result<String, Box<dyn Error>> {
     match col.type_().name() {
+        "void" => Ok(String::default()),
         "int4" => {
             let v: i32 = row.get(col.name());
             Ok(v.to_string())
@@ -48,34 +77,54 @@ fn parse_column_value(row: &postgres::Row, col: &Column) -> Result<String, Box<d
     }
 }
 
+#[cfg(test)]
 mod test {
+    use std::time::Duration;
     use postgres::NoTls;
     use crate::storage::connection::Connection;
     use crate::storage::db::postgres::Client;
 
     const DB_URL: &str = "host=localhost port=15432 user=postgres password=postgres dbname=test";
 
-    #[test]
-    fn exec() {
-        drop_data();
-        init_data();
-        let client = Client::new(DB_URL.to_string());
+    #[tokio::test]
+    async fn exec() {
+        drop_data().await;
+        init_data().await;
+        let client = Client::new_async(DB_URL.to_string()).await;
 
-        let rows = client.exec("select id, name, flag from test".to_string()).unwrap();
+        let rows = client.exec("select id, name, flag from test".to_string()).await.unwrap();
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0].columns.len(), 3);
         assert_eq!(rows[0].columns.iter().map(|x| x.0.to_owned()).collect::<Vec<_>>(), vec!["id", "name", "flag"]);
         assert_eq!(rows[0].columns.iter().map(|x| x.1.to_owned()).collect::<Vec<_>>(), vec!["1", "Islam", "true"]);
     }
 
-    fn init_data() {
-        let mut conn = postgres::Client::connect(DB_URL, NoTls).unwrap();
-        conn.execute("create table test(id int PRIMARY KEY, name varchar, flag boolean)", &[]).unwrap();
-        conn.execute("insert into test (id, name, flag) values (1, 'Islam', true)", &[]).unwrap();
+    #[tokio::test]
+    async fn close() {
+        {
+            let client = Client::new_async(DB_URL.to_string()).await;
+        }
+        tokio::time::sleep(Duration::from_secs(5)).await;
     }
 
-    fn drop_data() {
-        let mut conn = postgres::Client::connect(DB_URL, NoTls).unwrap();
-        conn.execute("drop table test", &[]).unwrap();
+    async fn init_data() {
+        let (mut conn, conn2) = tokio_postgres::connect(DB_URL, NoTls).await.unwrap();
+        tokio::spawn(async move{
+            if let Err(e) = conn2.await {
+                panic!("{}", e);
+            }
+        });
+        conn.execute("create table test(id int PRIMARY KEY, name varchar, flag boolean)", &[]).await.unwrap();
+        conn.execute("insert into test (id, name, flag) values (1, 'Islam', true)", &[]).await.unwrap();
+    }
+
+    async fn drop_data() {
+        let (mut conn, conn2) = tokio_postgres::connect(DB_URL, NoTls).await.unwrap();
+        tokio::spawn(async move{
+            if let Err(e) = conn2.await {
+                panic!("{}", e);
+            }
+        });
+        conn.execute("drop table test", &[]).await.unwrap_or(0);
     }
 }

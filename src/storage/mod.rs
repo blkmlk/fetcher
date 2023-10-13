@@ -1,3 +1,3 @@
 mod storage;
 mod connection;
-mod db;
+pub mod db;
