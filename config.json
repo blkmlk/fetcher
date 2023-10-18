@@ -13,7 +13,7 @@
     },
     {
       "connection": "mysql",
-      "query": "select * from org where user_id = '__PID__'",
+      "query": "select * from orgs where user_id = '__PID__'",
       "expected_rows": "multiple",
       "select_attributes": {
         "manager": ["Type::String", "!ConvertName::managers"]

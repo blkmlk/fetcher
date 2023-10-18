@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::fs;
 use std::future::Future;
 use std::io::{BufReader, Bytes, Read};
@@ -34,7 +35,26 @@ impl EntityHandler {
         }
     }
 
-    pub async fn get_entity(&mut self, id: i64) -> i64 {
-        0
+    pub async fn get_entity(&mut self, id: &str) -> Result<Vec<Row>, Box<dyn Error>> {
+        let mut result = vec![];
+        for gr in self.config.attr_groups.iter() {
+            let mut futs = vec![];
+            for v in gr.1.iter() {
+                let query = v.query.replace("__PID__", id);
+                let f = self.storage.exec(v.conn.clone(), query);
+                futs.push(f);
+            }
+
+            let results = future::join_all(futs).await;
+
+            for r in results {
+                match r {
+                    Ok(v) => result.extend(v),
+                    Err(e) => return Err(e)
+                }
+            }
+        }
+
+        Ok(result)
     }
 }

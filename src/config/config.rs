@@ -4,7 +4,7 @@ use serde_json::Value;
 use crate::config::config::Property::{Audit, ConvertName, ReturnAttribute, Type as PropertyType};
 use crate::config::config::Type::{Boolean, JSON, Number, String as TypeString};
 
-#[derive(Hash, Eq, PartialEq, Debug)]
+#[derive(Hash, Eq, PartialEq, Debug, Clone)]
 pub enum Connection {
     PostgresSQL,
     MySQL,
@@ -32,7 +32,7 @@ pub enum Property {
 }
 
 pub struct Config {
-    attr_groups: Vec<(String,Vec<AttributeGroup>)>
+    pub attr_groups: Vec<(String,Vec<AttributeGroup>)>
 }
 
 impl Config {
@@ -42,10 +42,10 @@ impl Config {
 }
 
 pub struct AttributeGroup {
-    conn: Connection,
-    query: String,
-    exp_rows: ExpectedRows,
-    select_attrs: Vec<(String, Vec<Property>)>
+    pub conn: Connection,
+    pub query: String,
+    pub exp_rows: ExpectedRows,
+    pub select_attrs: Vec<(String, Vec<Property>)>
 }
 
 impl AttributeGroup {
