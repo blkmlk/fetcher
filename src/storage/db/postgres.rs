@@ -8,7 +8,7 @@ use crate::storage::connection;
 use crate::storage::connection::{Connection, Row};
 
 pub struct Client {
-    client: RefCell<tokio_postgres::Client>,
+    client: tokio_postgres::Client,
     sp: JoinHandle<()>,
 }
 
@@ -29,7 +29,7 @@ impl Client {
         });
 
         Self {
-            client: RefCell::new(client),
+            client,
             sp: t,
         }
     }
@@ -43,7 +43,7 @@ impl Connection for Client {
     fn exec(&self, query: String) -> connection::ExecResult {
         return Box::pin(
             async move {
-                let resp = self.client.borrow_mut().query(&query, &[]).await?;
+                let resp = self.client.query(&query, &[]).await?;
                 let mut result = vec![];
 
                 for row in resp {

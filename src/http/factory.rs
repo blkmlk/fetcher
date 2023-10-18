@@ -13,7 +13,7 @@ async fn handle(req: HttpRequest) -> HttpResponse {
         let data = req.app_data::<web::Data<State>>().unwrap();
         let mut eh = data.entity_handler.lock().unwrap();
 
-        let res = eh.add_entity(id.parse::<i64>().unwrap_or(0)).await;
+        let res = eh.get_entity(id.parse::<i64>().unwrap_or(0)).await;
 
         println!("id = {}", res)
     }

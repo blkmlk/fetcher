@@ -6,7 +6,7 @@ use crate::storage::connection;
 use crate::storage::connection::{Connection, Row};
 
 pub struct Client {
-    pool: RefCell<mysql_async::Pool>
+    pool: mysql_async::Pool
 }
 
 impl Client {
@@ -14,7 +14,7 @@ impl Client {
         let pool = mysql_async::Pool::new(url.as_str());
 
         Self {
-            pool: RefCell::new(pool),
+            pool,
         }
     }
 }
@@ -23,7 +23,7 @@ impl Connection for Client {
     fn exec(&self, query: String) -> connection::ExecResult {
         return Box::pin(
             async move {
-                let mut conn = self.pool.borrow().get_conn().await?;
+                let mut conn = self.pool.get_conn().await?;
                 let rows: Vec<mysql_async::Row> = conn.query(query).await?;
                 let mut result = vec![];
 

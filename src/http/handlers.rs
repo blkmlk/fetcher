@@ -23,8 +23,10 @@ impl EntityHandler {
         let storage = Storage::new();
 
         let ps = block_on(storage::db::postgres::Client::new_async("host=localhost port=15432 user=postgres password=postgres dbname=test".to_string()));
+        let ms = storage::db::mysql::Client::new("mysql://mysql:mysql@localhost:13306/test".to_string());
 
         storage.add_connection(config::Connection::PostgresSQL, Box::new(ps));
+        storage.add_connection(config::Connection::MySQL, Box::new(ms));
 
         Self {
             storage,
@@ -32,10 +34,7 @@ impl EntityHandler {
         }
     }
 
-    pub async fn add_entity(&mut self, val: i64) -> i64 {
-        let f1 = self.storage.exec(config::Connection::PostgresSQL, format!("SELECT {}", val).to_string());
-        let f2 = self.storage.exec(config::Connection::PostgresSQL, format!("SELECT {}", val).to_string());
-        future::join_all(vec![f1, f2]).await;
+    pub async fn get_entity(&mut self, id: i64) -> i64 {
         0
     }
 }
