@@ -1,10 +1,23 @@
-use std::io;
-use actix_web::{HttpRequest, HttpResponse};
+use std::fs;
+use std::io::{BufReader, Bytes, Read};
+use crate::config::config;
+use crate::config::config::{Config};
 
-pub async fn get_entity(req: HttpRequest) -> HttpResponse {
-    if let Some(id) = req.match_info().get("id") {
-        println!("id: {}", id);
+pub struct EntityHandler {
+    config: Config,
+}
+
+impl EntityHandler {
+    pub fn new(config_path: &str) -> Self {
+        let data = fs::read(config_path).unwrap();
+        let config = config::parse(data.as_slice()).unwrap();
+
+        Self {
+            config,
+        }
     }
 
-    HttpResponse::Ok().finish()
+    pub fn add_entity(&mut self, val: i64) -> i64 {
+        0
+    }
 }

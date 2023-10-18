@@ -6,5 +6,6 @@ mod http;
 
 #[actix_web::main]
 async fn main() {
-    run_server("127.0.0.1:8099").await.unwrap();
+    let config_path = "./config.json";
+    run_server("127.0.0.1:8099", config_path).await.unwrap();
 }
