@@ -9,5 +9,5 @@ pub trait Connection {
 }
 
 pub struct Row {
-    pub(crate) columns: Vec<(String, String)>
+    pub columns: Vec<(String, String)>
 }
