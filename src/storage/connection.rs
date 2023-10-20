@@ -4,7 +4,7 @@ use std::pin::Pin;
 
 pub type ExecResult<'a> = Pin<Box<dyn Future<Output=Result<Vec<Row>, Box<dyn Error>>> + 'a>>;
 
-pub trait Connection {
+pub trait Connection: Send {
     fn exec(&self, query: String) -> ExecResult;
 }
 

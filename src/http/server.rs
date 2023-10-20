@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::io;
 use std::os::macos::raw::stat;
 use std::sync::{Arc, Mutex};
@@ -11,8 +12,10 @@ pub struct State {
 }
 
 pub async fn run_server(addr: &str, config_path: &str) -> Result<(), io::Error> {
+    let eh = EntityHandler::new(config_path).unwrap();
+
     let state = web::Data::new(State{
-        entity_handler: Mutex::new(EntityHandler::new(config_path)),
+        entity_handler: Mutex::new(eh),
     });
 
     HttpServer::new(move || {

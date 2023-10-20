@@ -6,7 +6,7 @@ use crate::storage::connection::{Connection, ExecResult, Row};
 use crate::config::config::Connection as ConfigConnection;
 
 pub struct Storage {
-    connections: RwLock<HashMap<ConfigConnection, Box<dyn Connection + Send>>>
+    connections: RwLock<HashMap<ConfigConnection, Box<dyn Connection>>>
 }
 
 impl Storage {
@@ -16,14 +16,14 @@ impl Storage {
         }
     }
 
-    pub fn add_connection(&self, conn_t: ConfigConnection, conn: Box<dyn Connection + Send>) {
+    pub fn add_connection(&self, conn_t: ConfigConnection, conn: Box<dyn Connection>) {
         let mut mp = self.connections.write().unwrap();
         mp.insert(conn_t, conn);
     }
 
     pub async fn exec(&self, conn_t: ConfigConnection, query: String) -> Result<Vec<Row>, Box<dyn Error>> {
         let mp = self.connections.read().unwrap();
-        let conn: &Box<dyn Connection + Send> = mp.get(&conn_t).unwrap();
+        let conn: &Box<dyn Connection> = mp.get(&conn_t).unwrap();
         conn.exec(query).await
     }
 }

@@ -6,6 +6,7 @@ use crate::storage::db::mysql;
 mod config;
 mod storage;
 mod http;
+mod domain;
 
 #[tokio::main]
 async fn main() {

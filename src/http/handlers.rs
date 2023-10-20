@@ -1,60 +1,24 @@
-use std::error::Error;
-use std::fs;
-use std::future::Future;
-use std::io::{BufReader, Bytes, Read};
-use std::process::Output;
-use futures_executor::block_on;
-use futures::{join};
-use futures_util::{future, FutureExt};
-use crate::config::config;
-use crate::config::config::{Config};
-use crate::storage;
-use crate::storage::connection::{ExecResult, Row};
-use crate::storage::storage::Storage;
+use crate::domain::fetcher::{Error, Fetcher};
 
 pub struct EntityHandler {
-    storage: Storage,
-    config: Config,
+    fetcher: Fetcher
 }
 
 impl EntityHandler {
-    pub fn new(config_path: &str) -> Self {
-        let data = fs::read(config_path).unwrap();
-        let config = config::parse(data.as_slice()).unwrap();
-        let storage = Storage::new();
+    pub fn new(config_path: &str) -> Result<Self, String> {
+        let fetcher = Fetcher::new(config_path).map_err(|e| match e {
+            Error::ConfigFileErr(msg) => format!("failed to read config file: {}", msg),
+            _ => format!("failed to init fetcher")
+        })?;
 
-        let ps = block_on(storage::db::postgres::Client::new_async("host=localhost port=15432 user=postgres password=postgres dbname=test".to_string()));
-        let ms = storage::db::mysql::Client::new("mysql://mysql:mysql@localhost:13306/test".to_string());
-
-        storage.add_connection(config::Connection::PostgresSQL, Box::new(ps));
-        storage.add_connection(config::Connection::MySQL, Box::new(ms));
-
-        Self {
-            storage,
-            config,
-        }
+        Ok(Self {
+            fetcher
+        })
     }
 
-    pub async fn get_entity(&mut self, id: &str) -> Result<Vec<Row>, Box<dyn Error>> {
-        let mut result = vec![];
-        for gr in self.config.attr_groups.iter() {
-            let mut futs = vec![];
-            for v in gr.1.iter() {
-                let query = v.query.replace("__PID__", id);
-                let f = self.storage.exec(v.conn.clone(), query);
-                futs.push(f);
-            }
+    pub async fn get_entity(&self, id: &str) -> Result<(), &'static str>{
+        self.fetcher.fetch_id(id).await;
 
-            let results = future::join_all(futs).await;
-
-            for r in results {
-                match r {
-                    Ok(v) => result.extend(v),
-                    Err(e) => return Err(e)
-                }
-            }
-        }
-
-        Ok(result)
+        Ok(())
     }
 }
