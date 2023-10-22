@@ -1,18 +1,31 @@
+use std::collections::HashMap;
 use std::fs;
 use futures_executor::block_on;
+use futures_util::future::join_all;
 use crate::config::config;
-use crate::domain::fetcher::Error::ConfigFileErr;
+use crate::domain::fetcher::Error::{ConfigFileErr, ExecErr, InvalidConfig};
 use crate::storage;
+use crate::storage::connection::{ExecResult, Row};
 use crate::storage::storage::Storage;
+use std::error::Error as StdError;
+use std::ops::Deref;
+use crate::config::config::{ExpectedRows, Property};
 
 pub enum Error {
     ConfigFileErr(String),
-    ExecErr(String)
+    ExecErr(String),
+    InvalidConfig,
 }
 
 pub struct Fetcher {
     cfg: config::Config,
     storage: Storage
+}
+
+#[derive(Clone)]
+pub enum Value {
+    String(String),
+    Array(Vec<String>)
 }
 
 impl Fetcher {
@@ -34,7 +47,81 @@ impl Fetcher {
         })
     }
 
-    pub async fn fetch_id(&self, id: &str) -> Result<(), Error> {
+    pub async fn fetch_id(&self, id: &str) -> Result<Vec<(String, Vec<(String, Value)>)>, Error> {
+        let attrs = self.cfg.attr_groups.iter().collect::<Vec<_>>();
+        let mut futs = vec![];
 
+        for (i, &&ref attr) in attrs.iter().enumerate() {
+            for (j, group) in attr.1.iter().enumerate() {
+                let query = group.query.replace("__PID__", id);
+                futs.push(async move {
+                    let resp = self.storage.exec(group.conn.clone(), query).await;
+                    (i, j, resp)
+                })
+            }
+        }
+
+        let results: Vec<(usize, usize, Result<Vec<Row>, Box<dyn StdError>>)> = join_all(futs).await;
+
+        let mut mapped: HashMap<String, Vec<(String,Value)>> = HashMap::new();
+        for res in results {
+            let &&ref attr = attrs.get(res.0).expect("unknown attribute");
+            let &ref group = attr.1.get(res.1).expect("unknown group");
+
+            let mut def_vec = Vec::new();
+            let mut attr_values = mapped.get_mut(&attr.0).unwrap_or(&mut def_vec);
+
+            let rows = res.2.map_err(|e| ExecErr(e.to_string()))?;
+
+            let rows_iter = if group.exp_rows == ExpectedRows::Single {
+                rows.iter().take(1)
+            } else {
+                if group.select_attrs.len() != 0 {
+                    return Err(InvalidConfig)
+                }
+                rows.iter().take(rows.len())
+            };
+
+            let mut values = vec![];
+            for row in rows_iter {
+                for (col_k, col_v) in row.columns.iter() {
+                    let name = group.select_attrs.iter().find_map(|(k,v)| {
+                        if k == col_k {
+                            if let Some(convert) = v.iter().find_map(|vv| {
+                                if let Property::ConvertName(cv) = vv {
+                                    return Some(cv)
+                                }
+                                None
+                            }) {
+                                return Some(convert)
+                            }
+                            return Some(k)
+                        }
+
+                        None
+                    });
+
+                    match name {
+                        None => continue,
+                        Some(vv) => values.push((vv.to_string(), Value::String(col_v.to_string())))
+                    }
+                }
+            }
+
+            if group.exp_rows == ExpectedRows::Multiple && values.len() > 0{
+                let &ref val = values.get(0).unwrap();
+                let array = values.iter().map(|e| {
+                    if let Value::String(v) = e.1.clone() {
+                        return v.to_string()
+                    }
+                    String::default()
+                }).collect::<Vec<String>>();
+                values = vec![(val.0.to_string(), Value::Array(array))];
+            }
+
+            attr_values.append(&mut values);
+        }
+
+        Ok(Vec::from_iter(mapped.into_iter()))
     }
 }
