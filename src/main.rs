@@ -10,7 +10,7 @@ mod domain;
 
 #[tokio::main]
 async fn main() {
-    init_db().await;
+    // init_db().await;
 
     let config_path = "./config.json";
     run_server("127.0.0.1:8099", config_path).await.unwrap();

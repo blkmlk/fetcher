@@ -64,23 +64,23 @@ impl Fetcher {
         let results: Vec<(usize, usize, Result<Vec<Row>, Box<dyn StdError>>)> = join_all(futs).await;
 
         let mut mapped: HashMap<String, Vec<(String,Value)>> = HashMap::new();
+
         for res in results {
             let &&ref attr = attrs.get(res.0).expect("unknown attribute");
             let &ref group = attr.1.get(res.1).expect("unknown group");
-
-            let mut def_vec = Vec::new();
-            let mut attr_values = mapped.get_mut(&attr.0).unwrap_or(&mut def_vec);
 
             let rows = res.2.map_err(|e| ExecErr(e.to_string()))?;
 
             let rows_iter = if group.exp_rows == ExpectedRows::Single {
                 rows.iter().take(1)
             } else {
-                if group.select_attrs.len() != 0 {
+                if group.select_attrs.len() != 1 {
                     return Err(InvalidConfig)
                 }
                 rows.iter().take(rows.len())
             };
+
+            let mut attr_values = mapped.entry(attr.0.to_string()).or_insert(Vec::new());
 
             let mut values = vec![];
             for row in rows_iter {

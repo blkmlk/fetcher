@@ -1,4 +1,4 @@
-use crate::domain::fetcher::{Error, Fetcher};
+use crate::domain::fetcher::{Error, Fetcher, Value};
 
 pub struct EntityHandler {
     fetcher: Fetcher
@@ -16,8 +16,26 @@ impl EntityHandler {
         })
     }
 
-    pub async fn get_entity(&self, id: &str) -> Result<(), &'static str>{
-        self.fetcher.fetch_id(id).await;
+    pub async fn get_entity(&self, id: &str) -> Result<(), String>{
+        let resp = match self.fetcher.fetch_id(id).await {
+            Ok(v) => v,
+            Err(e) => return match e {
+                Error::ConfigFileErr(msg) => Err(msg),
+                Error::ExecErr(msg) => Err(msg),
+                Error::InvalidConfig => Err(String::from("invalid config"))
+            }
+        };
+
+        for (attr, values) in resp {
+            println!("{}:", attr);
+
+            for val in values {
+                match val.1 {
+                    Value::String(v) => println!("\t{}: {}", val.0, v),
+                    Value::Array(vv) => println!("\t{}: {:?}", val.0, vv)
+                }
+            }
+        }
 
         Ok(())
     }

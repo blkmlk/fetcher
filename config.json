@@ -5,7 +5,7 @@
       "query": "select * from users where id = '__PID__'",
       "expected_rows": "single",
       "select_attributes": {
-        "fn": ["Type::String", "!ConvertName::firstname", "!Audit"],
+        "username": ["Type::String", "!ConvertName::firstname", "!Audit"],
         "ln": ["Type::String", "!ConvertName::lastname", "!Audit"],
         "currency": ["Type::String"],
         "age": ["Type::Number"]
@@ -14,9 +14,19 @@
     {
       "connection": "mysql",
       "query": "select * from orgs where user_id = '__PID__'",
+      "expected_rows": "single",
+      "select_attributes": {
+        "name": ["Type::String", "!ConvertName::nickname"]
+      }
+    }
+  ],
+  "names": [
+    {
+      "connection": "mysql",
+      "query": "select * from orgs where user_id = '__PID__'",
       "expected_rows": "multiple",
       "select_attributes": {
-        "manager": ["Type::String", "!ConvertName::managers"]
+        "name": ["Type::String", "!ConvertName::names"]
       }
     }
   ]
