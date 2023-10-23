@@ -26,7 +26,7 @@ async fn handle(req: HttpRequest) -> HttpResponse {
                     Value::String(vv) => serde_json::Value::String(vv),
                     Value::Array(vv) => serde_json::Value::Array(vv.iter().map(|e| {
                         serde_json::Value::String(e.to_string())
-                    }).collect::<Vec<serde_json::Value>>())
+                    }).collect())
                 };
                 in_obj.insert(k, val);
             }

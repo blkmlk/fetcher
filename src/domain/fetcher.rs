@@ -113,7 +113,7 @@ impl Fetcher {
                         return v.to_string()
                     }
                     String::default()
-                }).collect::<Vec<String>>();
+                }).collect();
                 values = vec![(val.0.to_string(), Value::Array(array))];
             }
 
