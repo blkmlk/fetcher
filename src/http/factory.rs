@@ -1,5 +1,7 @@
 use actix_web::{FromRequest, Handler, HttpRequest, HttpResponse, Responder, web};
 use actix_web::web::ServiceConfig;
+use serde_json::json;
+use crate::domain::fetcher::Value;
 use crate::http::server::State;
 
 pub fn route_factory(cfg: &mut ServiceConfig) {
@@ -11,11 +13,27 @@ async fn handle(req: HttpRequest) -> HttpResponse {
         let data = req.app_data::<web::Data<State>>().unwrap();
         let mut eh = data.entity_handler.lock().unwrap();
 
-        let res = eh.get_entity(id).await;
+        let resp = match eh.get_entity(id).await {
+            Err(e) => return HttpResponse::InternalServerError().body(e.to_string()),
+            Ok(v) => v
+        };
 
-        if let Err(e) = res {
-            return HttpResponse::InternalServerError().body(e.to_string())
+        let mut obj = serde_json::Map::new();
+        for (k, v) in resp {
+            let mut in_obj = serde_json::Map::new();
+            for (k2, v2) in v {
+                let val = match v2 {
+                    Value::String(vv) => serde_json::Value::String(vv),
+                    Value::Array(vv) => serde_json::Value::Array(vv.iter().map(|e| {
+                        serde_json::Value::String(e.to_string())
+                    }).collect::<Vec<serde_json::Value>>())
+                };
+                in_obj.insert(k2, val);
+            }
+            obj.insert(k, serde_json::Value::Object(in_obj));
         }
+
+        return HttpResponse::Ok().json(obj);
     }
 
     HttpResponse::Ok().finish()

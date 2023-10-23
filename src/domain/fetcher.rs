@@ -9,6 +9,9 @@ use crate::storage::connection::{ExecResult, Row};
 use crate::storage::storage::Storage;
 use std::error::Error as StdError;
 use std::ops::Deref;
+use serde::{Serialize, Serializer};
+use serde::ser::SerializeSeq;
+use serde_json::json;
 use crate::config::config::{ExpectedRows, Property};
 
 pub enum Error {

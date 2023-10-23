@@ -16,7 +16,7 @@ impl EntityHandler {
         })
     }
 
-    pub async fn get_entity(&self, id: &str) -> Result<(), String>{
+    pub async fn get_entity(&self, id: &str) -> Result<Vec<(String, Vec<(String, Value)>)>, String>{
         let resp = match self.fetcher.fetch_id(id).await {
             Ok(v) => v,
             Err(e) => return match e {
@@ -26,17 +26,6 @@ impl EntityHandler {
             }
         };
 
-        for (attr, values) in resp {
-            println!("{}:", attr);
-
-            for val in values {
-                match val.1 {
-                    Value::String(v) => println!("\t{}: {}", val.0, v),
-                    Value::Array(vv) => println!("\t{}: {:?}", val.0, vv)
-                }
-            }
-        }
-
-        Ok(())
+        Ok(resp)
     }
 }
