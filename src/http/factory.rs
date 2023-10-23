@@ -21,14 +21,14 @@ async fn handle(req: HttpRequest) -> HttpResponse {
         let mut obj = serde_json::Map::new();
         for (k, v) in resp {
             let mut in_obj = serde_json::Map::new();
-            for (k2, v2) in v {
-                let val = match v2 {
+            for (k, v) in v {
+                let val = match v {
                     Value::String(vv) => serde_json::Value::String(vv),
                     Value::Array(vv) => serde_json::Value::Array(vv.iter().map(|e| {
                         serde_json::Value::String(e.to_string())
                     }).collect::<Vec<serde_json::Value>>())
                 };
-                in_obj.insert(k2, val);
+                in_obj.insert(k, val);
             }
             obj.insert(k, serde_json::Value::Object(in_obj));
         }
