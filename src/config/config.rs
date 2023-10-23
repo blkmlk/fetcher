@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::error::Error;
 use serde_json::Value;
-use crate::config::config::Property::{Audit, ConvertName, ReturnAttribute, Type as PropertyType};
 use crate::config::config::Type::{Boolean, JSON, Number, String as TypeString};
 
 #[derive(Hash, Eq, PartialEq, Debug, Clone)]
@@ -24,11 +23,16 @@ pub enum Type {
     JSON,
 }
 
-pub enum Property {
-    Type(Type),
-    ConvertName(String),
-    Audit,
-    ReturnAttribute(String),
+pub struct Properties {
+    pub ptype: Type,
+    pub convert_name: Option<String>,
+    pub return_attribute: Option<String>
+}
+
+impl Properties {
+    pub fn new() -> Self {
+        Self { ptype: TypeString, convert_name: None, return_attribute: None }
+    }
 }
 
 pub struct Config {
@@ -45,7 +49,7 @@ pub struct AttributeGroup {
     pub conn: Connection,
     pub query: String,
     pub exp_rows: ExpectedRows,
-    pub select_attrs: Vec<(String, Vec<Property>)>
+    pub select_attrs: Vec<(String, Properties)>
 }
 
 impl AttributeGroup {
@@ -142,7 +146,7 @@ fn parse_exp_rows(value: &Value) -> Result<ExpectedRows, Box<dyn Error>> {
     Ok(r)
 }
 
-fn parse_select_attributes(value: &Value) -> Result<Vec<(String, Vec<Property>)>, Box<dyn Error>> {
+fn parse_select_attributes(value: &Value) -> Result<Vec<(String, Properties)>, Box<dyn Error>> {
     let r = match value {
         Value::Object(obj) => {
             let mut attrs = vec![];
@@ -150,7 +154,7 @@ fn parse_select_attributes(value: &Value) -> Result<Vec<(String, Vec<Property>)>
                 let name = k;
                 match v {
                     Value::Array(values) => {
-                        let mut props = vec![];
+                        let mut props = Properties::new();
                         for v in values {
                             match v {
                                 Value::String(prop) => {
@@ -165,11 +169,10 @@ fn parse_select_attributes(value: &Value) -> Result<Vec<(String, Vec<Property>)>
                                                 _=> return Err("invalid type".into())
                                             };
 
-                                            props.push(PropertyType(t));
+                                            props.ptype = t;
                                         },
-                                        "!ConvertName" => props.push(ConvertName(attr_value.to_string())),
-                                        "ReturnAttribute" => props.push(ReturnAttribute(attr_value.to_string())),
-                                        "!Audit" => props.push(Audit),
+                                        "!ConvertName" => props.convert_name = Some(attr_value.to_string()),
+                                        "ReturnAttribute" => props.return_attribute = Some(attr_value.to_string()),
                                         _=> return Err("invalid attr type".into())
                                     }
                                 }

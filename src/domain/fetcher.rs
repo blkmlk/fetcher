@@ -12,7 +12,7 @@ use std::ops::Deref;
 use serde::{Serialize, Serializer};
 use serde::ser::SerializeSeq;
 use serde_json::json;
-use crate::config::config::{ExpectedRows, Property};
+use crate::config::config::{ExpectedRows};
 
 pub enum Error {
     ConfigFileErr(String),
@@ -90,15 +90,10 @@ impl Fetcher {
                 for (col_k, col_v) in row.columns.iter() {
                     let name = group.select_attrs.iter().find_map(|(k,v)| {
                         if k == col_k {
-                            if let Some(convert) = v.iter().find_map(|vv| {
-                                if let Property::ConvertName(cv) = vv {
-                                    return Some(cv)
-                                }
-                                None
-                            }) {
-                                return Some(convert)
+                            if let Some(convert) = &v.convert_name {
+                                return Some(convert.to_string())
                             }
-                            return Some(k)
+                            return Some(k.to_string())
                         }
 
                         None
@@ -106,7 +101,7 @@ impl Fetcher {
 
                     match name {
                         None => continue,
-                        Some(vv) => values.push((vv.to_string(), Value::String(col_v.to_string())))
+                        Some(vv) => values.push((vv, Value::String(col_v.to_string())))
                     }
                 }
             }
