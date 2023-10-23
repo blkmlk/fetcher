@@ -99,14 +99,6 @@ mod test {
         assert_eq!(rows[0].columns.iter().map(|x| x.1.to_owned()).collect::<Vec<_>>(), vec!["1", "Islam", "true"]);
     }
 
-    #[tokio::test]
-    async fn close() {
-        {
-            let client = Client::new_async(DB_URL.to_string()).await;
-        }
-        tokio::time::sleep(Duration::from_secs(5)).await;
-    }
-
     async fn init_data() {
         let (mut conn, conn2) = tokio_postgres::connect(DB_URL, NoTls).await.unwrap();
         tokio::spawn(async move{

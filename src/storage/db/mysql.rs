@@ -54,7 +54,6 @@ impl Connection for Client {
     }
 }
 
-/*
 #[cfg(test)]
 mod test {
     use crate::storage::db::mysql::Client;
@@ -63,13 +62,13 @@ mod test {
 
     const DB_URL: &str = "mysql://mysql:mysql@localhost:13306/test";
 
-    #[test]
-    fn exec() {
+    #[tokio::test]
+    async fn exec() {
         drop_data();
         init_data();
         let client = Client::new(DB_URL.to_string());
 
-        let rows = client.exec("select id, name, flag from test".to_string()).unwrap();
+        let rows = client.exec("select id, name, flag from test".to_string()).await.unwrap();
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0].columns.len(), 3);
         assert_eq!(rows[0].columns.iter().map(|x| x.0.to_owned()).collect::<Vec<_>>(), vec!["id", "name", "flag"]);
@@ -90,4 +89,3 @@ mod test {
         conn.exec_drop("drop table test", ()).unwrap_or(());
     }
 }
- */

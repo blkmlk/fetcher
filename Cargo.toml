@@ -11,7 +11,6 @@ futures = "0.3"
 tokio = { version = "1.32", features = ["full"]}
 tokio-postgres = "0.7"
 mysql_async = "0.32"
-#async-std = { version = "1.12", features = ["attributes", "tokio1"] }
 pin-project = "1"
 futures-executor = "0.3"
 futures-util = "*"
