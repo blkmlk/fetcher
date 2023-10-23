@@ -5,7 +5,7 @@ use crate::domain::fetcher::Value;
 use crate::http::server::State;
 
 pub fn route_factory(cfg: &mut ServiceConfig) {
-        cfg.route("/entity/{id}", web::get().to(handle));
+        cfg.route("/id/{id}", web::get().to(handle));
 }
 
 async fn handle(req: HttpRequest) -> HttpResponse {
