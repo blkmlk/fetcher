@@ -3,7 +3,9 @@ use serde_json::Value;
 use crate::config::config::Type::{Boolean, JSON, Number, String as TypeString};
 
 #[derive(thiserror::Error, Debug)]
-enum Error {
+pub enum Error {
+    #[error("parse error")]
+    ParseError(String),
     #[error("invalid format")]
     InvalidFormat(String),
     #[error("unknown connection")]
@@ -75,7 +77,9 @@ impl AttributeGroup {
 }
 
 pub fn parse(data: &[u8]) -> Result<Config, Error> {
-    let raw: HashMap<String, Value> = serde_json::from_slice(data)?;
+    let raw: HashMap<String, Value> = serde_json::from_slice(data).
+        map_err(|e| Error::ParseError(e.to_string()))?;
+
     let mut groups = vec![];
 
     for (k, v) in raw.iter() {

@@ -38,11 +38,11 @@ impl Fetcher {
 
         let storage = Storage::new();
 
-        let ps = block_on(storage::db::postgres::Client::new_async("host=localhost port=15432 user=postgres password=postgres dbname=test".to_string()));
-        let ms = storage::db::mysql::Client::new("mysql://mysql:mysql@localhost:13306/test".to_string());
+        let pg_conn = storage::db::postgres::Client::new("host=localhost port=15432 user=postgres password=postgres dbname=test".to_string());
+        let mysql_conn = storage::db::mysql::Client::new("mysql://mysql:mysql@localhost:13306/test".to_string());
 
-        storage.add_connection(config::Connection::PostgresSQL, Box::new(ps));
-        storage.add_connection(config::Connection::MySQL, Box::new(ms));
+        storage.add_connection(config::Connection::PostgresSQL, Box::new(pg_conn));
+        storage.add_connection(config::Connection::MySQL, Box::new(mysql_conn));
 
         Ok(Self {
             cfg,
@@ -106,7 +106,7 @@ impl Fetcher {
                 }
             }
 
-            if group.exp_rows == ExpectedRows::Multiple && values.len() > 0{
+            if group.exp_rows == ExpectedRows::Multiple && values.len() > 0 {
                 let &ref val = values.get(0).unwrap();
                 let array = values.iter().map(|e| {
                     if let Value::String(v) = e.1.clone() {

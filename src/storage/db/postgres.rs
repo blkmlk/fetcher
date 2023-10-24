@@ -19,8 +19,8 @@ impl Drop for Client {
 }
 
 impl Client {
-    pub async fn new_async(url: String) -> Self {
-        let (client, conn) = tokio_postgres::connect(url.as_str(), tokio_postgres::NoTls).await.unwrap();
+    pub fn new(url: String) -> Self {
+        let (client, conn) = block_on(tokio_postgres::connect(url.as_str(), tokio_postgres::NoTls)).unwrap();
 
         let t = tokio::spawn(async move{
             if let Err(e) = conn.await {
@@ -90,7 +90,7 @@ mod test {
     async fn exec() {
         drop_data().await;
         init_data().await;
-        let client = Client::new_async(DB_URL.to_string()).await;
+        let client = Client::new(DB_URL.to_string());
 
         let rows = client.exec("select id, name, flag from test".to_string()).await.unwrap();
         assert_eq!(rows.len(), 1);
