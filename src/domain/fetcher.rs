@@ -38,7 +38,7 @@ impl Fetcher {
 
         let storage = Storage::new();
 
-        let pg_conn = storage::db::postgres::Client::new("host=localhost port=15432 user=postgres password=postgres dbname=test");
+        let pg_conn = block_on(storage::db::postgres::Client::new("host=localhost port=15432 user=postgres password=postgres dbname=test"));
         let mysql_conn = storage::db::mysql::Client::new("mysql://mysql:mysql@localhost:13306/test");
 
         storage.add_connection(config::Connection::PostgresSQL, Box::new(pg_conn));
