@@ -221,8 +221,8 @@ mod test {
         "query": "select * from users where id = '__PID__'",
         "expected_rows": "single",
         "select_attributes": {
-            "fn": ["Type::String", "!ConvertName::firstname", "!Audit"],
-            "ln": ["Type::String", "!ConvertName::lastname", "!Audit"],
+            "fn": ["Type::String", "!ConvertName::firstname"],
+            "ln": ["Type::String", "!ConvertName::lastname"],
             "currency": ["Type::String"],
             "age": ["Type::Number"]
         }
