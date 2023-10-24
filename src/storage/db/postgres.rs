@@ -44,7 +44,7 @@ impl Connection for Client {
         let query = query.to_string();
         return Box::pin(
             async move {
-                let resp = self.client.query(query.as_str(), &[]).await?;
+                let resp = self.client.query(&query, &[]).await?;
                 let mut result = vec![];
 
                 for row in resp {

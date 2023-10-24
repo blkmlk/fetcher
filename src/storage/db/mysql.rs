@@ -25,7 +25,7 @@ impl Connection for Client {
         return Box::pin(
             async move {
                 let mut conn = self.pool.get_conn().await?;
-                let rows: Vec<mysql_async::Row> = conn.query(query.as_str()).await?;
+                let rows: Vec<mysql_async::Row> = conn.query(&query).await?;
                 let mut result = vec![];
 
                 for row in rows {
