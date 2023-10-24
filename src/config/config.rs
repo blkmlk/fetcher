@@ -1,7 +1,18 @@
 use std::collections::HashMap;
-use std::error::Error;
 use serde_json::Value;
 use crate::config::config::Type::{Boolean, JSON, Number, String as TypeString};
+
+#[derive(thiserror::Error, Debug)]
+enum Error {
+    #[error("invalid format")]
+    InvalidFormat(String),
+    #[error("unknown connection")]
+    UnknownConnection(String),
+    #[error("unknown type")]
+    UnknownType(String),
+    #[error("unknown property")]
+    UnknownProperty(String),
+}
 
 #[derive(Hash, Eq, PartialEq, Debug, Clone)]
 pub enum Connection {
@@ -63,7 +74,7 @@ impl AttributeGroup {
     }
 }
 
-pub fn parse(data: &[u8]) -> Result<Config, Box<dyn Error>> {
+pub fn parse(data: &[u8]) -> Result<Config, Error> {
     let raw: HashMap<String, Value> = serde_json::from_slice(data)?;
     let mut groups = vec![];
 
@@ -96,11 +107,11 @@ pub fn parse(data: &[u8]) -> Result<Config, Box<dyn Error>> {
 
                             props.push(attr_group);
                         }
-                        _=> return Err("group is not an object".into())
+                        _=> return Err(Error::InvalidFormat(String::from("group is not an object")))
                     }
                 }
             }
-            _ => return Err("not an array".into())
+            _ => return Err(Error::InvalidFormat(String::from("not an array")))
         }
         groups.push((group_name.to_owned(), props))
     }
@@ -108,45 +119,45 @@ pub fn parse(data: &[u8]) -> Result<Config, Box<dyn Error>> {
     Ok(Config::new(groups))
 }
 
-fn parse_connection(value: &Value) -> Result<Connection, Box<dyn Error>> {
+fn parse_connection(value: &Value) -> Result<Connection, Error> {
     let r = match value {
         Value::String(conn) => {
             match conn.as_str() {
                 "postgresql" | "postgres" => Connection::PostgresSQL,
                 "mysql" => Connection::MySQL,
                 "mongodb" => Connection::MongoDB,
-                _ =>return Err("unknown connection".into())
+                _ => return Err(Error::UnknownConnection(conn.to_owned()))
             }
         }
-        _ => return Err("connection is not a string".into())
+        _ => return Err(Error::InvalidFormat(String::from("connection is not a string")))
     };
 
     Ok(r)
 }
 
-fn parse_query(value: &Value) -> Result<String, Box<dyn Error>> {
+fn parse_query(value: &Value) -> Result<String, Error> {
     let r = match value {
         Value::String(query) => query.to_string(),
-        _ => return Err("invalid query".into())
+        _ => return Err(Error::InvalidFormat(String::from("invalid query")))
     };
 
     Ok(r)
 }
 
-fn parse_exp_rows(value: &Value) -> Result<ExpectedRows, Box<dyn Error>> {
+fn parse_exp_rows(value: &Value) -> Result<ExpectedRows, Error> {
     let r = match value {
         Value::String(exp) => match exp.as_str() {
             "single" => ExpectedRows::Single,
             "multiple" => ExpectedRows::Multiple,
-            _ => return Err("invalid exp rows value".into())
+            _ => return Err(Error::InvalidFormat(String::from("invalid exp rows value")))
         }
-        _ => return Err("invalid exp rows".into())
+        _ => return Err(Error::InvalidFormat(String::from("invalid exp rows")))
     };
 
     Ok(r)
 }
 
-fn parse_select_attributes(value: &Value) -> Result<Vec<(String, Properties)>, Box<dyn Error>> {
+fn parse_select_attributes(value: &Value) -> Result<Vec<(String, Properties)>, Error> {
     let r = match value {
         Value::Object(obj) => {
             let mut attrs = vec![];
@@ -166,28 +177,28 @@ fn parse_select_attributes(value: &Value) -> Result<Vec<(String, Properties)>, B
                                                 "Number" => Number,
                                                 "JSON" => JSON,
                                                 "Boolean" => Boolean,
-                                                _=> return Err("invalid type".into())
+                                                _=> return Err(Error::UnknownType(String::from(attr_value)))
                                             };
 
                                             props.ptype = t;
                                         },
                                         "!ConvertName" => props.convert_name = Some(attr_value.to_string()),
                                         "ReturnAttribute" => props.return_attribute = Some(attr_value.to_string()),
-                                        _=> return Err("invalid attr type".into())
+                                        _=> return Err(Error::UnknownProperty(String::from(attr_type)))
                                     }
                                 }
-                                _ => return Err("invalid property".into())
+                                _ => return Err(Error::InvalidFormat(String::from("select_attributes")))
                             }
                         }
                         attrs.push((name.to_owned(), props));
                     }
-                    _=> return Err("invalid select_attrs".into())
+                    _ => return Err(Error::InvalidFormat(String::from("select_attributes")))
                 }
             }
 
             attrs
         }
-        _ => return Err("select_attrs is not an object".into())
+        _ => return Err(Error::InvalidFormat(String::from("select_attributes is not an object")))
     };
 
     Ok(r)
