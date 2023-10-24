@@ -21,7 +21,7 @@ impl Storage {
         mp.insert(conn_t, conn);
     }
 
-    pub async fn exec(&self, conn_t: ConfigConnection, query: String) -> Result<Vec<Row>, Box<dyn Error>> {
+    pub async fn exec(&self, conn_t: ConfigConnection, query: &str) -> Result<Vec<Row>, Box<dyn Error>> {
         let mp = self.connections.read().unwrap();
         let conn: &Box<dyn Connection> = mp.get(&conn_t).unwrap();
         conn.exec(query).await
@@ -45,7 +45,7 @@ mod test {
         pub fn new() -> Self {Self {}}
     }
     impl Connection for MockConnection {
-        fn exec(&self, query: String) -> ExecResult {
+        fn exec(&self, query: &str) -> ExecResult {
             Box::pin(
                async move {
                    Ok(vec![])
@@ -59,7 +59,7 @@ mod test {
         let storage = Storage::new();
         storage.add_connection(PostgresSQL, Box::new(MockConnection::new()));
 
-        let res = storage.exec(PostgresSQL, String::from("test query")).await;
+        let res = storage.exec(PostgresSQL, "test query").await;
         assert!(res.is_ok());
     }
 }

@@ -38,8 +38,8 @@ impl Fetcher {
 
         let storage = Storage::new();
 
-        let pg_conn = storage::db::postgres::Client::new("host=localhost port=15432 user=postgres password=postgres dbname=test".to_string());
-        let mysql_conn = storage::db::mysql::Client::new("mysql://mysql:mysql@localhost:13306/test".to_string());
+        let pg_conn = storage::db::postgres::Client::new("host=localhost port=15432 user=postgres password=postgres dbname=test");
+        let mysql_conn = storage::db::mysql::Client::new("mysql://mysql:mysql@localhost:13306/test");
 
         storage.add_connection(config::Connection::PostgresSQL, Box::new(pg_conn));
         storage.add_connection(config::Connection::MySQL, Box::new(mysql_conn));
@@ -58,7 +58,7 @@ impl Fetcher {
             for (j, group) in attr.1.iter().enumerate() {
                 let query = group.query.replace("__PID__", id);
                 futs.push(async move {
-                    let resp = self.storage.exec(group.conn.clone(), query).await;
+                    let resp = self.storage.exec(group.conn.clone(), query.as_str()).await;
                     (i, j, resp)
                 })
             }

@@ -19,8 +19,8 @@ impl Drop for Client {
 }
 
 impl Client {
-    pub fn new(url: String) -> Self {
-        let (client, conn) = block_on(tokio_postgres::connect(url.as_str(), tokio_postgres::NoTls)).unwrap();
+    pub fn new(url: &str) -> Self {
+        let (client, conn) = block_on(tokio_postgres::connect(url, tokio_postgres::NoTls)).unwrap();
 
         let t = tokio::spawn(async move{
             if let Err(e) = conn.await {
@@ -40,10 +40,11 @@ impl Client {
 }
 
 impl Connection for Client {
-    fn exec(&self, query: String) -> connection::ExecResult {
+    fn exec(&self, query: &str) -> connection::ExecResult {
+        let query = query.to_string();
         return Box::pin(
             async move {
-                let resp = self.client.query(&query, &[]).await?;
+                let resp = self.client.query(query.as_str(), &[]).await?;
                 let mut result = vec![];
 
                 for row in resp {
@@ -90,9 +91,9 @@ mod test {
     async fn exec() {
         drop_data().await;
         init_data().await;
-        let client = Client::new(DB_URL.to_string());
+        let client = Client::new(DB_URL);
 
-        let rows = client.exec("select id, name, flag from test".to_string()).await.unwrap();
+        let rows = client.exec("select id, name, flag from test").await.unwrap();
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0].columns.len(), 3);
         assert_eq!(rows[0].columns.iter().map(|x| x.0.to_owned()).collect::<Vec<_>>(), vec!["id", "name", "flag"]);
