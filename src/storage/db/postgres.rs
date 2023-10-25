@@ -36,7 +36,7 @@ impl Client {
     }
 
     pub fn close(&self) {
-        self.sp.abort();
+        // self.sp.abort();
     }
 }
 
@@ -81,7 +81,6 @@ fn parse_column_value(row: &tokio_postgres::Row, col: &tokio_postgres::Column) -
 
 #[cfg(test)]
 mod test {
-    use futures_executor::block_on;
     use postgres::NoTls;
     use crate::storage::connection::Connection;
     use crate::storage::db::postgres::Client;
@@ -92,33 +91,35 @@ mod test {
     async fn exec() {
         drop_data().await;
         init_data().await;
-        let client = block_on(Client::new(DB_URL));
+        let client = Client::new(DB_URL).await;
 
-        // let rows = client.exec("select id, name, flag from test").await.unwrap();
-        // assert_eq!(rows.len(), 1);
-        // assert_eq!(rows[0].columns.len(), 3);
-        // assert_eq!(rows[0].columns.iter().map(|x| x.0.to_owned()).collect::<Vec<_>>(), vec!["id", "name", "flag"]);
-        // assert_eq!(rows[0].columns.iter().map(|x| x.1.to_owned()).collect::<Vec<_>>(), vec!["1", "Islam", "true"]);
+        let rows = client.exec("select id, name, flag from test").await.unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].columns.len(), 3);
+        assert_eq!(rows[0].columns.iter().map(|x| x.0.to_owned()).collect::<Vec<_>>(), vec!["id", "name", "flag"]);
+        assert_eq!(rows[0].columns.iter().map(|x| x.1.to_owned()).collect::<Vec<_>>(), vec!["1", "Islam", "true"]);
     }
 
     async fn init_data() {
         let (mut conn, conn2) = tokio_postgres::connect(DB_URL, NoTls).await.unwrap();
-        tokio::spawn(async move{
+        let t = tokio::spawn(async move{
             if let Err(e) = conn2.await {
                 panic!("{}", e);
             }
         });
         conn.execute("create table test(id int PRIMARY KEY, name varchar, flag boolean)", &[]).await.unwrap();
         conn.execute("insert into test (id, name, flag) values (1, 'Islam', true)", &[]).await.unwrap();
+        t.abort()
     }
 
     async fn drop_data() {
         let (mut conn, conn2) = tokio_postgres::connect(DB_URL, NoTls).await.unwrap();
-        tokio::spawn(async move{
+        let t = tokio::spawn(async move{
             if let Err(e) = conn2.await {
                 panic!("{}", e);
             }
         });
         conn.execute("drop table test", &[]).await.unwrap_or(0);
+        t.abort();
     }
 }
